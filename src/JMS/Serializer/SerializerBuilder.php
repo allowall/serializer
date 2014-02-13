@@ -21,6 +21,7 @@ namespace JMS\Serializer;
 use JMS\Serializer\Handler\PhpCollectionHandler;
 use JMS\Serializer\Handler\PropelCollectionHandler;
 use JMS\Serializer\Exception\RuntimeException;
+use JMS\Serializer\Metadata\Driver\DoctrineTypeDriver;
 use Metadata\MetadataFactory;
 use JMS\Serializer\Metadata\Driver\AnnotationDriver;
 use JMS\Serializer\Handler\HandlerRegistry;
@@ -43,6 +44,7 @@ use Doctrine\Common\Annotations\FileCacheReader;
 use Metadata\Cache\FileCache;
 use JMS\Serializer\Naming\SerializedNameAnnotationStrategy;
 use JMS\Serializer\Exception\InvalidArgumentException;
+use Doctrine\Common\Persistence\ManagerRegistry;
 
 /**
  * Builder for serializer instances.
@@ -321,7 +323,7 @@ class SerializerBuilder
         return $this;
     }
 
-    public function build()
+    public function build(ManagerRegistry $managerRegistry)
     {
         $annotationReader = $this->annotationReader;
         if (null === $annotationReader) {
@@ -335,11 +337,16 @@ class SerializerBuilder
 
         if ( ! empty($this->metadataDirs)) {
             $fileLocator = new FileLocator($this->metadataDirs);
-            $metadataDriver = new DriverChain(array(
+            $driverChain = new DriverChain(array(
                 new YamlDriver($fileLocator),
                 new XmlDriver($fileLocator),
                 new AnnotationDriver($annotationReader),
             ));
+
+            $metadataDriver = new DoctrineTypeDriver(
+                $driverChain,
+                $managerRegistry
+            );
         } else {
             $metadataDriver = new AnnotationDriver($annotationReader);
         }
